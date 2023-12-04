@@ -55,7 +55,8 @@ def create_possessions_from_events(game):
         possession_start_time = possession.start_time
         possession_end_time = possession.end_time
         possession_team_id = possession.offense_team_id
-        point = count_points(possession)
+        score = score_for_possessions(game)
+        # point = count_points(possession)
         new_possession = []
         oreb_flag = False
         # print(possession.events)
@@ -70,8 +71,8 @@ def create_possessions_from_events(game):
                 'OffenseTeamId': possession_team_id,
                 'EventNum': event.event_num,
                 'EventType': event.event_type,
-                # 'Points': score[event.event_num][possession_team_id] if event.event_num in score else 0,
-                'Points': point,
+                'Points': score[event.event_num][possession_team_id] if event.event_num in score and possession_team_id in score[event.event_num] else 0,
+                # 'Points': point,
                 'EventActionType': event.event_action_type,
                 'EventDescription': event.description,
                 'EventTime': event.clock,
@@ -118,10 +119,11 @@ def parse_possesssions(game):
     flattened_possessions = [event for possession in possessions for event in possession]
     possession_df = pd.DataFrame(flattened_possessions)
 
-    # point_df = possession_df.groupby(['PossessionId'])['Points'].sum().reset_index()
-    # possession_df = possession_df.merge(point_df, on=['PossessionId'], how='left')
-    # possession_df.drop(columns=['Points_x'], axis=1, inplace=True)
-    # possession_df = possession_df.rename(columns={'Points_y': 'Points'})
+    print(possession_df['Points'].sum())
+    point_df = possession_df.groupby(['PossessionId'])['Points'].sum().reset_index()
+    possession_df = possession_df.merge(point_df, on=['PossessionId'], how='left')
+    possession_df.drop(columns=['Points_x'], axis=1, inplace=True)
+    possession_df = possession_df.rename(columns={'Points_y': 'Points'})
     possession_df['event_id'] = possession_df['EventNum']
     possession_df.drop(columns=['EventNum'], axis=1, inplace=True)
 
