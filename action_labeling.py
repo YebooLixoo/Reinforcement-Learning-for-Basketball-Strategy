@@ -174,6 +174,10 @@ if __name__ == "__main__":
     fg_pct_df = pd.read_csv(Path.cwd() / "data/player_shot_percentage.csv")
     fg_pct_df = fg_pct_df[['PLAYER_ID', 'GAME_ID', '2pt_shot_percentage', '3pt_shot_percentage']]
 
+    players_df = pd.read_csv(Path.cwd() / "data/players_data.csv")
+    players_df = players_df[players_df['team_id']==cle_team_id]
+    players_df = players_df[['player_id', 'jersey_number', 'position']]
+
     for game_id in game_ids:
         posession_df  = pd.read_csv(Path(possessions_data_path) / f"{game_id}_possessions.csv")
         print(posession_df.shape[0])
@@ -185,22 +189,35 @@ if __name__ == "__main__":
 
         final_action_df = get_final_action_data(game_id, final_df, action_data_path)
 
-        merged_df = pd.merge(final_action_df, fg_pct_df, how='left', left_on=['game_id', 'ball_handler'], right_on=['GAME_ID', 'PLAYER_ID'])
-        merged_df = pd.merge(merged_df, fg_pct_df, how='left', left_on=['game_id', 'Player1Id'], right_on=['GAME_ID', 'PLAYER_ID'], suffixes=('_ball_handler', '_player1'))
-        merged_df = pd.merge(merged_df, fg_pct_df, how='left', left_on=['game_id', 'SHOT_PLAYER_ID'], right_on=['GAME_ID', 'PLAYER_ID'], suffixes=('', '_shot_player'))
+        action_df = pd.merge(final_action_df, fg_pct_df, how='left', left_on=['game_id', 'ball_handler'], right_on=['GAME_ID', 'PLAYER_ID'])
+        action_df = pd.merge(action_df, fg_pct_df, how='left', left_on=['game_id', 'Player1Id'], right_on=['GAME_ID', 'PLAYER_ID'], suffixes=('_ball_handler', '_player1'))
+        action_df = pd.merge(action_df, fg_pct_df, how='left', left_on=['game_id', 'SHOT_PLAYER_ID'], right_on=['GAME_ID', 'PLAYER_ID'], suffixes=('', '_shot_player'))
 
-        merged_df['2pt_shot_percentage_ball_handler'] = merged_df['2pt_shot_percentage_ball_handler']
-        merged_df['3pt_shot_percentage_ball_handler'] = merged_df['3pt_shot_percentage_ball_handler']
-        merged_df['2pt_shot_percentage_player1'] = merged_df['2pt_shot_percentage_player1']
-        merged_df['3pt_shot_percentage_player1'] = merged_df['3pt_shot_percentage_player1']
-        merged_df['2pt_shot_percentage_shot_player'] = merged_df['2pt_shot_percentage']
-        merged_df['3pt_shot_percentage_shot_player'] = merged_df['3pt_shot_percentage']
+        action_df['2pt_shot_percentage_ball_handler'] = action_df['2pt_shot_percentage_ball_handler']
+        action_df['3pt_shot_percentage_ball_handler'] = action_df['3pt_shot_percentage_ball_handler']
+        action_df['2pt_shot_percentage_player1'] = action_df['2pt_shot_percentage_player1']
+        action_df['3pt_shot_percentage_player1'] = action_df['3pt_shot_percentage_player1']
+        action_df['2pt_shot_percentage_shot_player'] = action_df['2pt_shot_percentage']
+        action_df['3pt_shot_percentage_shot_player'] = action_df['3pt_shot_percentage']
 
-        merged_df.drop(columns=['PLAYER_ID_ball_handler', 'GAME_ID_ball_handler', 'PLAYER_ID_player1', 'GAME_ID_player1', 'PLAYER_ID',
+        action_df.drop(columns=['PLAYER_ID_ball_handler', 'GAME_ID_ball_handler', 'PLAYER_ID_player1', 'GAME_ID_player1', 'PLAYER_ID',
                         'GAME_ID', '2pt_shot_percentage', '3pt_shot_percentage'], inplace=True)
         
-        merged_df['Reward'] = merged_df.apply(calculate_reward, axis=1)
+        action_df['Reward'] = action_df.apply(calculate_reward, axis=1)
 
-        print(merged_df.shape[0])
-        merged_df.to_csv(Path(action_data_path) / f"{game_id}_actions.csv", index=False)
+        action_df = action_df.merge(players_df, how='left', left_on=['ball_handler'], right_on=['player_id'])
+        action_df = action_df.merge(players_df, how='left', left_on=['Player1Id'], right_on=['player_id'], suffixes=('_ball_handler', '_player1'))
+        action_df = action_df.merge(players_df, how='left', left_on=['SHOT_PLAYER_ID'], right_on=['player_id'], suffixes=('', '_shot_player'))
+
+        action_df['jersey_number_ball_handler'] = action_df['jersey_number_ball_handler']
+        action_df['position_ball_handler'] = action_df['position_ball_handler']
+        action_df['jersey_number_player1'] = action_df['jersey_number_player1']
+        action_df['position_player1'] = action_df['position_player1']
+        action_df['jersey_number_shot_player'] = action_df['jersey_number']
+        action_df['position_shot_player'] = action_df['position']
+
+        action_df.drop(columns=['player_id_ball_handler', 'player_id_player1', 'player_id', 'jersey_number', 'position'], inplace=True)
+
+        print(action_df.shape[0])
+        action_df.to_csv(Path(action_data_path) / f"{game_id}_actions.csv", index=False)
         print(f"Game {game_id} laebeled with actions has been save to {action_data_path}/{game_id}_actions.csv")
